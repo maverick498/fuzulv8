@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akıllı Yönetim Paneli v4.2 (Final Tasarım)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        /* --- 1. TEMEL DEĞİŞKENLER VE ANİMASYONLAR (RENKLER GÜNCELLENDİ) --- */
+        :root {
+            --primary-color: #36A2EB; /* Ana Mavi Tonu */
+            --accent-color: #00D4FF;  /* Vurgu Rengi (Camgöbeği) */
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --error-color: #f44336;
+            --text-color: #f5f5f5;
+            --text-light: #bdbdbd;
+            --glass-bg: rgba(42, 62, 90, 0.5); /* Mavi Tonlu Cam Arkaplanı */
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --dark-dropdown-bg: #2c3e50; /* Koyu Kurşun Mavi Menü Arkaplanı */
+        }
+
+        @keyframes animatedGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes slideInFromTop {
+            from {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%) skewX(-30deg);
+            }
+            100% {
+                transform: translateX(250%) skewX(-30deg);
+            }
+        }
+
+        /* --- 2. GÖVDE VE GENEL YAPI (RENK GÜNCELLENDİ) --- */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1d2b4a, #2a4a70, #4a6e9a); /* Koyu Mavi Tonlarında Geçiş */
+            background-size: 400% 400%;
+            animation: animatedGradient 25s ease infinite;
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow-x: hidden;
+            transition: background 0.5s ease;
+        }
+
+        /* --- 3. CAM EFEKTİ (GLASSMORPHISM) PANELLERİ --- */
+        .panel, #profile-panel, #gate-customer-panel, #phone-customer-panel, .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            padding: 20px;
+            transition: all 0.3s ease;
+            animation: slideInFromTop 0.6s backwards;
+        }
+
+        .dashboard-container > *, .left-sidebar > * {
+            animation: slideInFromTop 0.6s backwards;
+        }
+        .left-sidebar { animation-delay: 0.1s; }
+        #turn-panel { animation-delay: 0.2s; }
+        .queue-container { animation-delay: 0.3s; }
+        #status-panel { animation-delay: 0.4s; }
+
+
+        /* --- 4. YAZI TİPLERİ VE RENKLERİ --- */
+        .panel-title { 
+            margin-top: 0; 
+            margin-bottom: 15px; 
+            font-size: 1.1rem; 
+            font-weight: 600; 
+            color: var(--text-color);
+            border-bottom: 1px solid var(--glass-border); 
+            padding-bottom: 10px; 
+        }
+
+        h3 { color: var(--text-color); }
+        p { color: var(--text-light); }
+        #profile-panel h3 { margin: 10px 0 5px 0; font-size: 1.1rem; }
+        #profile-panel p { margin: 0; color: var(--text-light); }
+        #gate-customer-panel h3, #phone-customer-panel h3 { margin-top: 0; font-size: 1rem; text-align: center; }
+
+        /* --- 5. BUTONLARIN YENİ TASARIMI --- */
+        .btn {
+            padding: 12px 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+            transform: translateX(-150%) skewX(-30deg);
+            transition: transform 0.6s ease;
+            z-index: -1;
+        }
+        .btn:hover::before {
+            transform: translateX(300%) skewX(-30deg);
+        }
+        .btn:active {
+            transform: scale(0.96);
+            box-shadow: none;
+        }
+        .btn:disabled {
+            background-color: #6c757d !important;
+            cursor: not-allowed !important;
+            opacity: 0.5;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #106f7e 100%);
+        }
+
+        /* --- MEVCUT YAPININ YENİ TASARIMA UYARLANMASI (RENKLER GÜNCELLENDİ) --- */
+        .left-sidebar {
+            width: 260px;
+            background-color: transparent;
+            padding: 20px;
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .queue-container { display: flex; flex-direction: column; gap: 20px; grid-row: 2 / 3; }
+        #profile-panel { text-align: center; border: none; }
+        #profile-panel img { 
+            width: 80px; height: 80px; 
+            border-radius: 50%; 
+            border: 4px solid var(--primary-color); 
+            margin-bottom: 10px; 
+            box-shadow: 0 4px 15px rgba(54, 162, 235, 0.4); /* GÜNCELLENDİ */
+        }
+        #gate-customer-panel input, #phone-customer-panel input { 
+            width: calc(100% - 22px); 
+            padding: 10px; 
+            border: 1px solid var(--glass-border); 
+            background-color: rgba(0,0,0,0.2);
+            color: var(--text-color);
+            border-radius: 12px; 
+            margin-bottom: 10px; 
+        }
+        
+        /* DÜZELTME: Tüm demode select menüleri için ortak modern stil */
+        #phone-staff-select, #scoreboard-list .status-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f5f5f5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1em;
+            cursor: pointer;
+        }
+
+        #phone-staff-select {
+             width: calc(100% - 0px); /* Genişliği diğerleriyle tam hizalı yapar */
+             padding: 10px; 
+             border: 1px solid var(--glass-border); 
+             background-color: rgba(0,0,0,0.2);
+             color: var(--text-color);
+             border-radius: 12px; 
+             margin-bottom: 10px;
+        }
+
+        #phone-staff-select option, #scoreboard-list .status-select option {
+            background: var(--dark-dropdown-bg);
+            color: var(--text-color);
+        }
+
+        #gate-customer-panel input::placeholder, #phone-customer-panel input::placeholder {
+             color: var(--text-light);
+        }
+        #gate-customer-panel button, #phone-customer-panel button { width: 100%; padding: 12px; font-size: 16px; }
+        .dashboard-container { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 20px; max-width: 1200px; margin: auto; }
+        #turn-panel { grid-row: 1 / 2; }
+        #turn-panel .turn-indicator { text-align: center; background-color: rgba(0,0,0,0.3); color: white; padding: 15px; border-radius: 12px; }
+        #toggle-tts-btn {
+            background: none; border: none; cursor: pointer; font-size: 22px; color: #999;
+            margin-right: 10px; padding: 0 5px; vertical-align: middle; transition: color 0.3s ease;
+        }
+        #toggle-tts-btn:hover { color: #eee; }
+        #toggle-tts-btn.active { color: var(--primary-color); }
+        #turn-panel #staff-name { font-size: 36px; font-weight: 700; color: var(--text-color); background: none; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-top: 5px; min-height: 43px; }
+        #queue-panel, #held-queue-panel { display: flex; flex-direction: column; }
+        #customer-list, #held-customer-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+        #held-queue-panel .panel-title { color: var(--warning-color); }
+        #customer-list li, #held-customer-list li {
+            padding: 12px;
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 16px; cursor: pointer; display: flex;
+            justify-content: space-between; align-items: center;
+            transition: background-color 0.3s;
+        }
+        #customer-list li:hover, #held-customer-list li:hover { background-color: rgba(255,255,255,0.05); }
+        #customer-list li.selected { 
+            background-color: rgba(54, 162, 235, 0.2); /* GÜNCELLENDİ */
+            border-left: 4px solid var(--primary-color); 
+            font-weight: bold; 
+        }
+        .queue-info-container { display: flex; align-items: center; gap: 12px; flex-grow: 1; min-width: 0; }
+        .customer-queue-number {
+            font-size: 14px; font-weight: bold; color: var(--primary-color);
+            background-color: rgba(54, 162, 235, 0.15); /* GÜNCELLENDİ */
+            padding: 3px 8px; border-radius: 10px; min-width: 20px; text-align: center;
+        }
+        .customer-wait-time { font-size: 13px; color: var(--text-light); font-style: italic; margin-left: auto; padding-left: 10px; white-space: nowrap; }
+        #held-customer-list li .hold-status { font-style: italic; color: var(--warning-color); font-size: 14px; margin-left: 8px; font-weight: bold; }
+        #customer-list li .customer-name, #held-customer-list li .customer-name { 
+            flex-grow: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+        }
+        #customer-list li .customer-name[contenteditable="true"], #held-customer-list li .customer-name[contenteditable="true"] { 
+            background-color: #fffbe6; outline: 1px solid #f1c40f; padding: 2px 5px; border-radius: 4px; color: #333;
+        }
+        .customer-actions { position: relative; flex-shrink: 0; }
+        .actions-menu-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; border-radius: 50%; line-height: 1; color: var(--text-color); }
+        .actions-menu-btn:hover { background-color: rgba(255,255,255,0.1); }
+        .dropdown-menu { 
+            display: block; position: absolute; background-color: var(--dark-dropdown-bg);
+            border: 1px solid var(--glass-border); border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1100; min-width: 160px;
+        }
+        .dropdown-menu a { color: var(--text-color); padding: 10px 15px; text-decoration: none; display: block; font-size: 14px; }
+        .dropdown-menu a:hover { background-color: rgba(54, 162, 235, 0.2); } /* GÜNCELLENDİ */
+        .dropdown-menu a.delete { color: var(--error-color); }
+        .actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
+        #status-panel { grid-column: 2 / 3; grid-row: 1 / 3; display: flex; flex-direction: column; gap: 20px; }
+        #datetime-panel { text-align: center; font-size: 16px; }
+        #time { font-size: 28px; font-weight: 700; color: var(--text-color); }
+        #date { color: var(--text-light); }
+        #announcement-list { list-style: none; padding: 0; margin: 0; max-height: 120px; overflow-y: auto;}
+        #announcement-list li { background: rgba(54, 162, 235, 0.15); border-left: 4px solid var(--primary-color); padding: 10px; margin-bottom: 10px; border-radius: 4px; } /* GÜNCELLENDİ */
+        #scoreboard-list { list-style: none; padding: 0; margin: 0; }
+        #scoreboard-list li { 
+            display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 10px; 
+            align-items: center; padding: 10px 5px; 
+            border-bottom: 1px solid var(--glass-border); 
+            border-radius: 12px; transition: background-color 0.3s ease, box-shadow 0.3s ease; 
+        }
+        #scoreboard-list li:hover { background-color: rgba(255,255,255,0.05); }
+        @keyframes subtle-glow {
+            0% { box-shadow: 0 0 4px rgba(54, 162, 235, 0.5), 0 0 0 1px var(--primary-color); } /* GÜNCELLENDİ */
+            50% { box-shadow: 0 0 12px rgba(54, 162, 235, 0.8), 0 0 0 1px var(--primary-color); } /* GÜNCELLENDİ */
+            100% { box-shadow: 0 0 4px rgba(54, 162, 235, 0.5), 0 0 0 1px var(--primary-color); } /* GÜNCELLENDİ */
+        }
+        #scoreboard-list li.next-in-line { animation: subtle-glow 2s infinite ease-in-out; border-radius: 12px; }
+        .staff-queue-info { display: flex; align-items: center; gap: 8px; }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .status-indicator.status-müsait { background-color: var(--success-color); }
+        .status-indicator.status-meşgul { background-color: var(--error-color); }
+        .status-indicator.status-mola { background-color: var(--warning-color); }
+        .status-indicator.status-i̇zinli { background-color: #9e9e9e; }
+        .queue-order-number { font-size: 14px; font-weight: bold; color: var(--primary-color); width: 20px; text-align: center; }
+        .staff-details { display: flex; flex-direction: column; }
+        .staff-name-container { display: flex; align-items: center; gap: 5px; font-weight: 600; color: var(--text-color); }
+        .last-activity-time { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+        #scoreboard-list .info-btn { cursor: pointer; font-style: normal; background: none; border: none; padding: 0; font-size: 16px; }
+        #scoreboard-list .score { font-weight: 700; background: rgba(54, 162, 235, 0.15); color: var(--primary-color); padding: 2px 8px; border-radius: 12px; } /* GÜNCELLENDİ */
+        #scoreboard-list .status-select { 
+            font-size: 12px; padding: 4px 8px; border-radius: 5px; 
+            border: 1px solid var(--glass-border); 
+            background-color: rgba(0,0,0,0.3);
+            color: var(--text-color);
+        }
+        #scoreboard-list .status-select:disabled { background-color: #424242 !important; cursor: not-allowed !important; }
+        .history-btn { background: #424242; border: 1px solid #616161; color: var(--text-color); border-radius: 50%; cursor: pointer; padding: 4px; width: 24px; height: 24px; line-height: 1; text-align: center; }
+        #activity-log-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; font-size: 13px; }
+        #activity-log-list li { padding: 8px 5px; border-bottom: 1px solid var(--glass-border); }
+        #activity-log-list li:last-child { border-bottom: none; }
+        #activity-log-list li b { color: var(--primary-color); }
+        .activity-log-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+        #activity-search-input {
+            flex: 1 1 150px;
+            padding: 8px;
+            border: 1px solid var(--glass-border);
+            border-radius: 5px;
+            background: rgba(0,0,0,0.2);
+            color: var(--text-color);
+        }
+        #export-excel-btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        #close-announcement-btn { position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: white; font-size: 28px; font-weight: bold; line-height: 1; cursor: pointer; opacity: 0.7; transition: opacity 0.2s ease, transform 0.2s ease; }
+        #close-announcement-btn:hover { opacity: 1; transform: scale(1.1); }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        #confirm-modal .modal-content { max-width: 450px; text-align: center; }
+        #confirm-text { font-size: 18px; margin: 15px 0; line-height: 1.5; color: var(--text-color); }
+        #confirm-input, #transfer-select { display: block; width: 85%; margin: 15px auto; padding: 10px; border: 1px solid var(--glass-border); border-radius: 12px; font-size: 16px; background-color: rgba(0,0,0,0.3); color: var(--text-color); }
+        #confirm-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
+        #confirm-yes-btn, #confirm-no-btn { padding: 10px 25px; font-size: 16px; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease; }
+        #confirm-yes-btn { background: linear-gradient(135deg, var(--success-color), #388e3c); color: white; }
+        #confirm-no-btn { background: linear-gradient(135deg, #616161, #424242); color: white; }
+        #history-list { list-style-type: decimal; padding-left: 25px; color: var(--text-color); }
+        #history-list li { padding: 8px; border-bottom: 1px solid var(--glass-border); }
+        .cust-type-indicator { font-size: 12px; color: var(--text-light); margin-left: 5px; font-style: italic; }
+        #history-list .status-masada { color: var(--error-color); font-weight: bold; margin-left: 10px; }
+        #history-list .finish-btn, #history-list .transfer-btn { font-size: 12px; padding: 2px 6px; margin-left: 10px; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #history-list .finish-btn { background-color: var(--success-color); }
+        #history-list .transfer-btn { background-color: var(--primary-color); }
+        #history-list .duration { font-style: italic; color: var(--text-light); font-size: 13px; margin-left: 10px; }
+        .chat-container { display: flex; height: 300px; }
+        .contact-list { width: 30%; border-right: 1px solid var(--glass-border); padding-right: 10px; overflow-y: auto; }
+        .contact-list div { padding: 10px; cursor: pointer; border-radius: 5px; transition: background-color 0.3s; }
+        .contact-list div:hover, .contact-list .active { background-color: rgba(54, 162, 235, 0.2); font-weight: bold; } /* GÜNCELLENDİ */
+        .chat-window { width: 70%; padding-left: 10px; display: flex; flex-direction: column; }
+        .messages { flex-grow: 1; border: 1px solid var(--glass-border); border-radius: 5px; padding: 10px; margin-bottom: 10px; overflow-y: auto; background-color: rgba(0,0,0,0.2); }
+        .messages p { margin: 0 0 8px 0; }
+        .chat-window input { border: 1px solid var(--glass-border); padding: 8px; border-radius: 5px; width: calc(100% - 18px); background-color: rgba(0,0,0,0.3); color: var(--text-color); }
+        .mobile-header { display: none; }
+        .overlay { display: none; }
+        #notification-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .notification {
+            background-color: var(--dark-dropdown-bg); color: var(--text-color); padding: 15px;
+            border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            border-left: 5px solid var(--primary-color); min-width: 300px;
+            opacity: 0; transform: translateX(100%);
+            display: flex; justify-content: space-between; align-items: center;
+            touch-action: none; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
+        }
+        .notification.exit { transition: transform 0.3s ease-out, opacity 0.3s ease-out !important; opacity: 0 !important; }
+        .notification.show { opacity: 1; transform: translateX(0); }
+        .notification.success { border-left-color: var(--success-color); }
+        .notification.warning { border-left-color: var(--warning-color); }
+        .notification.error { border-left-color: var(--error-color); }
+        .undo-btn { margin-left: 15px; padding: 5px 10px; border: 1px solid var(--primary-color); background: transparent; color: var(--primary-color); border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .undo-btn:hover { background: rgba(54, 162, 235, 0.15); } /* GÜNCELLENDİ */
+        
+        #centered-notification {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: var(--primary-color);
+            color: white; padding: 25px 40px; border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(30, 90, 150, 0.4); z-index: 2500; /* GÜNCELLENDİ */
+            text-align: center; max-width: 500px; width: 90%;
+            opacity: 0; visibility: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #centered-notification.is-visible { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+        #centered-notification-text { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.5; }
+        
+        /* --- 6. MOBİL UYUMLULUK (RENKLER GÜNCELLENDİ) --- */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .main-content { padding-top: 70px; }
+            .dashboard-container { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+            .queue-container { grid-row: 2; }
+            #status-panel { grid-row: 3; }
+            .mobile-header { 
+                display: flex; justify-content: space-between; align-items: center; 
+                padding: 10px; 
+                background: rgba(29, 43, 74, 0.7); /* GÜNCELLENDİ */
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+                position: fixed; top: 0; left: 0; width: 100%; 
+                z-index: 1010;
+                transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; 
+            }
+            .mobile-header.is-hidden { transform: translateY(-100%); opacity: 0; }
+            .menu-btn { font-size: 24px; background: none; border: none; cursor: pointer; padding: 5px 10px; border-radius: 12px; color: var(--text-color); transition: background-color 0.2s; }
+            .menu-btn:hover { background-color: rgba(255,255,255,0.1); }
+            .overlay { 
+                display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(0, 0, 0, 0.6); 
+                z-index: 998; opacity: 0; transition: opacity 0.3s ease; 
+                backdrop-filter: blur(2px);
+            }
+            .overlay.is-active { display: block; opacity: 1; }
+            .actions { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); }
+            .btn { padding: 14px 8px; font-size: 15px; }
+            .left-sidebar { 
+                position: fixed; top: 0; left: 0; height: 100%; 
+                z-index: 999; transform: translateX(-100%); 
+                transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+                background: linear-gradient(160deg, #1d2b4a, #2a4a70); /* GÜNCELLENDİ */
+            }
+            .left-sidebar.is-open { transform: translateX(0); }
+            #status-panel { 
+                position: fixed; top: 0; right: 0; width: 280px; height: 100%; 
+                grid-column: auto; grid-row: auto; 
+                background: linear-gradient(200deg, #1d2b4a, #2a4a70); /* GÜNCELLENDİ */
+                z-index: 999; padding: 20px; 
+                box-shadow: -2px 0 15px rgba(0,0,0,0.3); 
+                overflow-y: auto; transform: translateX(100%); 
+                transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            }
+            #status-panel.is-open { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-header">
+        <button id="left-menu-btn" class="menu-btn">&#9776;</button>
+        <span style="font-weight: bold; color: var(--text-color);">Yönetim Paneli</span>
+        <button id="right-menu-btn" class="menu-btn">&#128202;</button>
+    </div>
+    <div id="overlay" class="overlay"></div>
+    <div id="left-sidebar" class="left-sidebar">
+        <div id="profile-panel">
+            <img src="https://placehold.co/100x100/36A2EB/FFFFFF/png?text=KP" alt="Profil Resmi">
+            <h3>Kullanıcı Paneli</h3>
+            <p>Aktif Kullanıcı</p>
+        </div>
+        <div id="gate-customer-panel">
+            <h3>Kapı Müşterisi Ekle</h3>
+            <input type="text" id="gate-customer-name-input" placeholder="Müşteri Adı (Opsiyonel)">
+            <button id="add-gate-customer-btn" class="btn btn-primary">Kuyruğa Ekle</button>
+        </div>
+        <div id="phone-customer-panel">
+            <h3>Telefon Müşterisi</h3>
+            <input type="text" id="phone-customer-name-input" placeholder="Müşteri Adı">
+            <select id="phone-staff-select"></select>
+            <button id="assign-phone-customer-btn" class="btn btn-primary">Müşteri Al</button>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="dashboard-container">
+            <div id="turn-panel" class="panel">
+                <div class="turn-indicator">
+                    <span>SIRA ŞİMDİ</span>
+                    <button id="toggle-tts-btn" title="Sesli Bildirimi Aç/Kapat">🔇</button>
+                    <span id="staff-name"></span>
+                </div>
+                <div class="actions">
+                    <button id="accept-customer-btn" class="btn btn-primary">Kabul Et</button>
+                    <button id="hold-customer-btn" class="btn btn-info">Beklet</button>
+                </div>
+            </div>
+            
+            <div class="queue-container">
+                <div id="queue-panel" class="panel">
+                    <h3 class="panel-title">Bekleyen Müşteriler</h3>
+                    <ul id="customer-list"></ul>
+                </div>
+                <div id="held-queue-panel" class="panel">
+                    <h3 class="panel-title">Bekletilen Müşteriler</h3>
+                    <ul id="held-customer-list"></ul>
+                </div>
+            </div>
+
+            <div id="status-panel">
+                <div id="datetime-panel" class="panel">
+                    <div id="time"></div>
+                    <div id="date"></div>
+                </div>
+                <div id="announcement-panel" class="panel">
+                    <h3 class="panel-title">Genel Duyurular</h3>
+                    <ul id="announcement-list"><li>Hoş geldiniz! Lütfen gün sonu raporlarını unutmayın.</li></ul>
+                    <button id="add-announcement-btn" class="btn btn-secondary" style="width:100%; margin-top:10px;">Yeni Duyuru Ekle</button>
+                </div>
+                <div id="scoreboard-panel" class="panel">
+                    <h3 class="panel-title">Personel Durum Paneli</h3>
+                    <ul id="scoreboard-list"></ul>
+                </div>
+                <div id="activity-log-panel" class="panel">
+                    <h3 class="panel-title">Son Hareketler</h3>
+                    <ul id="activity-log-list"></ul>
+                    <div class="activity-log-controls">
+                        <input type="search" id="activity-search-input" placeholder="Son hareketlerde ara...">
+                        <button id="export-excel-btn" class="btn btn-secondary">&#128196; Excel'e Aktar</button>
+                    </div>
+                </div>
+                <div id="messaging-panel" class="panel">
+                    <h3 class="panel-title">İletişim</h3>
+                    <button id="open-chat-btn" class="btn btn-primary" style="width:100%;">Mesajlaşma Panelini Aç</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="history-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="history-modal-title" class="panel-title">Personel Geçmişi</h3>
+            <ul id="history-list"></ul>
+        </div>
+    </div>
+    <div id="chat-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 class="panel-title">Mesajlaşma</h3>
+            <div class="chat-container">
+                <div class="contact-list"></div>
+                <div class="chat-window">
+                    <div class="messages"></div>
+                    <input id="chat-input" type="text" placeholder="Mesajınızı yazıp Enter'a basın...">
+                </div>
+            </div>
+            <p style="font-size:12px; color:#999; text-align:center; margin-top:10px;">Bu arayüz görsel bir prototiptir.</p>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="confirm-title" class="panel-title">İşlem Onayı</h3>
+            <div id="confirm-text">Bu işleme devam etmek istediğinize emin misiniz?</div>
+            <input type="text" id="confirm-input" style="display: none;">
+            <div id="confirm-buttons">
+                <button id="confirm-yes-btn">Evet</button>
+                <button id="confirm-no-btn">Hayır</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="centered-notification">
+    <button id="close-announcement-btn" class="close-announcement-btn" title="Kapat">&times;</button>
+    <p id="centered-notification-text"></p>
+    </div>
+
+    <div id="notification-container"></div>
+    
+    <audio id="new-customer-sound" src="https://github.com/maverick498/maverick498.github.io/raw/refs/heads/main/1.mp3" preload="auto"></audio>
+    <audio id="accept-sound" src="https://github.com/maverick498/maverick498.github.io/raw/refs/heads/main/2.mp3" preload="auto"></audio>
+
+   <script>
+        // JAVASCRIPT KODU DEĞİŞMEDİ, ÖNCEKİ DÜZELTME GEÇERLİ.
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const staffNameElement = document.getElementById('staff-name');
+            const customerListElement = document.getElementById('customer-list');
+            const heldCustomerListElement = document.getElementById('held-customer-list');
+            const addGateCustomerBtn = document.getElementById('add-gate-customer-btn');
+            const gateCustomerNameInput = document.getElementById('gate-customer-name-input');
+            const phoneCustomerNameInput = document.getElementById('phone-customer-name-input');
+            const phoneStaffSelect = document.getElementById('phone-staff-select');
+            const assignPhoneCustomerBtn = document.getElementById('assign-phone-customer-btn');
+            const acceptCustomerBtn = document.getElementById('accept-customer-btn');
+            const holdCustomerBtn = document.getElementById('hold-customer-btn');
+            const timeElement = document.getElementById('time');
+            const dateElement = document.getElementById('date');
+            const scoreboardList = document.getElementById('scoreboard-list');
+            const addAnnouncementBtn = document.getElementById('add-announcement-btn');
+            const historyModal = document.getElementById('history-modal');
+            const closeHistoryBtn = historyModal.querySelector('.close-btn');
+            const historyList = document.getElementById('history-list');
+            const historyModalTitle = document.getElementById('history-modal-title');
+            const chatModal = document.getElementById('chat-modal');
+            const openChatBtn = document.getElementById('open-chat-btn');
+            const closeChatBtn = chatModal.querySelector('.close-btn');
+            const contactList = document.querySelector('.contact-list');
+            const messagesWindow = document.querySelector('.messages');
+            const chatInput = document.getElementById('chat-input');
+            const leftMenuBtn = document.getElementById('left-menu-btn');
+            const rightMenuBtn = document.getElementById('right-menu-btn');
+            const leftSidebar = document.getElementById('left-sidebar');
+            const rightSidebarContainer = document.getElementById('status-panel');
+            const overlay = document.getElementById('overlay');
+            const activityLogList = document.getElementById('activity-log-list');
+            const confirmModal = document.getElementById('confirm-modal');
+            const confirmText = document.getElementById('confirm-text');
+            const confirmInput = document.getElementById('confirm-input');
+            const confirmYesBtn = document.getElementById('confirm-yes-btn');
+            const confirmNoBtn = document.getElementById('confirm-no-btn');
+            const exportExcelBtn = document.getElementById('export-excel-btn');
+            const activitySearchInput = document.getElementById('activity-search-input');
+            const newCustomerSound = document.getElementById('new-customer-sound');
+            const acceptSound = document.getElementById('accept-sound');
+            const toggleTtsBtn = document.getElementById('toggle-tts-btn');
+            const closeAnnouncementBtn = document.getElementById('close-announcement-btn');
+            const mobileHeader = document.querySelector('.mobile-header');
+            const notificationContainer = document.getElementById('notification-container');
+
+            const staff = ['Amine Yaşsöğüt', 'Meryem Öter', 'Onur Bastem', 'Bilal Sarıyar'];
+
+            let isTtsEnabled = false; 
+            let isEditingName = false;
+            let customerCounter = 0;
+            let phoneCustomerCounter = 0;
+            let downloadCounters = {};
+            let gateCustomerLog = [];
+            let lastTopStaff = null;
+            let staffData = {};
+            staff.forEach(s => {
+                staffData[s] = {
+                    gercekSkor: 0,
+                    phoneSkor: 0,
+                    denklemSkoru: 0,
+                    status: 'Müsait',
+                    lastActivityTimestamp: Date.now(),
+                    isBusyWithCustomer: false,
+                    servedCustomers: [],
+                    returnFromLeaveInfo: null
+                };
+            });
+            let chatHistory = {
+                '# Toplu Mesaj': [{ sender: 'Müdür', text: "Toplantı 17:00'de." }],
+                'Amine Yaşsöğüt': [], 'Meryem Öter': [], 'Onur Bastem': [], 'Bilal Sarıyar': [],
+            };
+            let pendingAction = null;
+            let announcementTimeoutId = null; 
+
+            function showCenteredAnnouncement(message) {
+                const notificationBox = document.getElementById('centered-notification');
+                const notificationText = document.getElementById('centered-notification-text');
+                notificationText.textContent = message;
+                if (newCustomerSound) {
+                    newCustomerSound.currentTime = 0;
+                    newCustomerSound.play().catch(e => console.error("Duyuru sesi çalınamadı:", e));
+                }
+                notificationBox.classList.add('is-visible');
+                announcementTimeoutId = setTimeout(() => {
+                    notificationBox.classList.remove('is-visible');
+                }, 5000);
+            }
+            
+            function speak(text) {
+                if (!isTtsEnabled || !('speechSynthesis' in window)) {
+                    return;
+                }
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'tr-TR';
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            }
+
+            function showConfirmation({ message, inputOptions = null, customHtmlContent = null, title = "İşlem Onayı", alertMode = false, yesText = 'Evet', noText = 'Hayır' }) {
+                return new Promise(resolve => {
+                    document.getElementById('confirm-title').textContent = title;
+                    const existingCustomContent = confirmText.querySelector('.custom-content-wrapper');
+                    if (existingCustomContent) {
+                        existingCustomContent.remove();
+                    }
+                    if (customHtmlContent) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'custom-content-wrapper';
+                        wrapper.innerHTML = customHtmlContent;
+                        confirmText.innerHTML = '';
+                        confirmText.appendChild(wrapper);
+                    } else {
+                        confirmText.innerHTML = message;
+                    }
+                    if (inputOptions) {
+                        confirmInput.style.display = 'block';
+                        confirmInput.value = inputOptions.value || '';
+                        confirmInput.placeholder = inputOptions.placeholder || '';
+                    } else {
+                        confirmInput.style.display = 'none';
+                    }
+                    confirmYesBtn.textContent = yesText;
+                    confirmNoBtn.textContent = noText;
+                    if (alertMode) {
+                        confirmNoBtn.style.display = 'none';
+                        confirmYesBtn.textContent = 'Tamam';
+                    } else {
+                        confirmNoBtn.style.display = 'inline-block';
+                    }
+                    confirmModal.style.display = 'flex';
+                    if (inputOptions) confirmInput.focus();
+                    const customSelect = confirmText.querySelector('select');
+                    const yesHandler = () => {
+                        cleanup();
+                        resolve({
+                            confirmed: true,
+                            value: inputOptions ? confirmInput.value : null,
+                            selectValue: customSelect ? customSelect.value : null
+                        });
+                    };
+                    const noHandler = () => {
+                        cleanup();
+                        resolve({ confirmed: false, value: null, selectValue: null });
+                    };
+                    const cleanup = () => {
+                        confirmModal.style.display = 'none';
+                        confirmYesBtn.removeEventListener('click', yesHandler);
+                        confirmNoBtn.removeEventListener('click', noHandler);
+                        document.removeEventListener('keydown', enterHandler);
+                        confirmNoBtn.style.display = 'inline-block';
+                        confirmYesBtn.textContent = 'Evet';
+                    }
+                    const enterHandler = (e) => {
+                        if (e.key === 'Enter') {
+                            if (document.activeElement === confirmInput || document.activeElement === confirmYesBtn || document.activeElement === customSelect) {
+                                e.preventDefault();
+                                yesHandler();
+                            }
+                        }
+                    }
+                    confirmYesBtn.addEventListener('click', yesHandler);
+                    confirmNoBtn.addEventListener('click', noHandler);
+                    document.addEventListener('keydown', enterHandler);
+                });
+            }
+
+            function logActivity(staffName, action, details = '') {
+                const li = document.createElement('li');
+                const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                let logText = `<b>[${time}] ${staffName}:</b> ${action}`;
+                if (details) {
+                    logText += ` (${details})`;
+                }
+                li.innerHTML = logText;
+                activityLogList.prepend(li);
+                const searchTerm = activitySearchInput.value.toLowerCase();
+                if (searchTerm && !li.textContent.toLowerCase().includes(searchTerm)) {
+                    li.style.display = 'none';
+                }
+                if (activityLogList.children.length > 100) {
+                    activityLogList.removeChild(activityLogList.lastChild);
+                }
+            }
+
+            function showNotification(message, type = 'info', duration = 3500, onUndo = null) {
+                const container = document.getElementById('notification-container');
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                const messageSpan = document.createElement('span');
+                messageSpan.textContent = message;
+                notification.appendChild(messageSpan);
+                let timeoutId;
+                const closeNotification = () => {
+                    if (notification.parentElement) {
+                        notification.classList.remove('show');
+                        notification.classList.add('exit');
+                        notification.style.transform = `translateX(100%)`;
+                        notification.addEventListener('transitionend', () => notification.remove());
+                    }
+                    if (pendingAction && pendingAction.timeoutId === timeoutId) {
+                        pendingAction.commit();
+                    }
+                };
+                if (onUndo) {
+                    const undoButton = document.createElement('button');
+                    undoButton.className = 'undo-btn';
+                    undoButton.textContent = 'Geri Al';
+                    undoButton.onclick = () => {
+                        onUndo();
+                        clearTimeout(timeoutId);
+                        if (notification.parentElement) {
+                           notification.remove();
+                        }
+                    };
+                    notification.appendChild(undoButton);
+                }
+                
+                let startX = 0;
+                let currentX = 0;
+                let isSwiping = false;
+
+                notification.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    currentX = startX;
+                    isSwiping = true;
+                    clearTimeout(timeoutId);
+                    notification.style.transition = 'none';
+                }, { passive: true });
+
+                notification.addEventListener('touchmove', (e) => {
+                    if (!isSwiping) return;
+                    currentX = e.touches[0].clientX;
+                    const diffX = currentX - startX;
+                    notification.style.transform = `translateX(${diffX}px)`;
+                }, { passive: true });
+
+                notification.addEventListener('touchend', () => {
+                    if (!isSwiping) return;
+                    isSwiping = false;
+                    const diffX = currentX - startX;
+                    const threshold = notification.offsetWidth / 2.5;
+
+                    notification.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
+                    if (Math.abs(diffX) > threshold) {
+                        notification.classList.add('exit');
+                        notification.style.transform = `translateX(${diffX > 0 ? '120%' : '-120%'})`;
+                        notification.addEventListener('transitionend', () => notification.remove(), { once: true });
+                    } else {
+                        notification.style.transform = 'translateX(0)';
+                        timeoutId = setTimeout(closeNotification, duration);
+                    }
+                });
+
+                container.appendChild(notification);
+                setTimeout(() => { notification.classList.add('show'); }, 10);
+                timeoutId = setTimeout(closeNotification, duration);
+                return timeoutId;
+            }
+
+            function addGateCustomerToQueue() {
+                const customerName = gateCustomerNameInput.value.trim();
+                const newCustomer = document.createElement('li');
+                const customerId = `customer-${Date.now()}`;
+                newCustomer.id = customerId;
+                const customerText = customerName ? customerName : `Müşteri #${++customerCounter}`;
+                newCustomer.dataset.timestamp = Date.now();
+                newCustomer.dataset.name = customerText;
+                newCustomer.innerHTML = `
+                    <div class="queue-info-container">
+                        <span class="customer-queue-number"></span>
+                        <span class="customer-name" title="${customerText}">${customerText}</span>
+                        <span class="customer-wait-time"></span>
+                    </div>
+                    <div class="customer-actions">
+                        <button class="actions-menu-btn" title="İşlemler">⋮</button>
+                    </div>`;
+                customerListElement.appendChild(newCustomer);
+                logActivity('Sistem', 'yeni kapı müşterisi kuyruğa eklendi', `Müşteri: ${customerText}`);
+                gateCustomerLog.push({ name: customerText, timestamp: Date.now() });
+                gateCustomerNameInput.value = '';
+                gateCustomerNameInput.focus();
+                if (newCustomerSound) {
+                    newCustomerSound.currentTime = 0;
+                    newCustomerSound.play().catch(e => console.error("Yeni müşteri sesi çalınamadı:", e));
+                }
+            }
+
+            function formatWaitTime(totalSeconds) {
+                if (isNaN(totalSeconds) || totalSeconds < 0) return "00:00";
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = Math.floor(totalSeconds % 60);
+                return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            function renderCustomerList() {
+                const items = Array.from(customerListElement.children);
+                const selectedId = customerListElement.querySelector('li.selected')?.id;
+                const customers = items.map(li => ({
+                    id: li.id,
+                    timestamp: parseInt(li.dataset.timestamp, 10),
+                    element: li
+                }));
+                customers.sort((a, b) => a.timestamp - b.timestamp);
+                customerListElement.innerHTML = '';
+                const now = Date.now();
+                customers.forEach((cust, index) => {
+                    const waitSeconds = (now - cust.timestamp) / 1000;
+                    const numberSpan = cust.element.querySelector('.customer-queue-number');
+                    const timeSpan = cust.element.querySelector('.customer-wait-time');
+                    if (numberSpan) numberSpan.textContent = index + 1;
+                    if (timeSpan) timeSpan.textContent = formatWaitTime(waitSeconds);
+                    if (cust.id === selectedId) {
+                        cust.element.classList.add('selected');
+                    }
+                    customerListElement.appendChild(cust.element);
+                });
+            }
+
+            function closeActionsMenu() {
+                const existingMenu = document.getElementById('dynamic-actions-menu');
+                if (existingMenu) {
+                    existingMenu.remove();
+                    window.removeEventListener('scroll', closeActionsMenu, true);
+                    customerListElement.removeEventListener('scroll', closeActionsMenu, true);
+                    heldCustomerListElement.removeEventListener('scroll', closeActionsMenu, true);
+                }
+            }
+
+            function openActionsMenu(li) {
+                closeActionsMenu();
+                const menu = document.createElement('div');
+                menu.id = 'dynamic-actions-menu';
+                menu.className = 'dropdown-menu';
+                menu.dataset.targetId = li.id;
+                const isHeld = li.parentElement.id === 'held-customer-list';
+                menu.innerHTML = `
+                    <a href="#" class="edit-name">Adı Düzenle</a>
+                    ${isHeld ? '<a href="#" class="remove-hold">Bekletmeyi Kaldır</a>' : ''}
+                    <a href="#" class="delete-customer delete">Sil</a>
+                `;
+                document.body.appendChild(menu);
+                const button = li.querySelector('.actions-menu-btn');
+                const rect = button.getBoundingClientRect();
+                menu.style.top = `${rect.bottom}px`;
+                menu.style.left = `${rect.right - menu.offsetWidth}px`;
+                window.addEventListener('scroll', closeActionsMenu, { once: true, capture: true });
+                customerListElement.addEventListener('scroll', closeActionsMenu, { once: true, capture: true });
+                heldCustomerListElement.addEventListener('scroll', closeActionsMenu, { once: true, capture: true });
+            }
+
+            function getStaffQueueOrder() {
+                const availableStaff = staff.filter(s => staffData[s].status === 'Müsait');
+                availableStaff.sort((a, b) => {
+                    const scoreDiff = staffData[a].denklemSkoru - staffData[b].denklemSkoru;
+                    if (scoreDiff !== 0) return scoreDiff;
+                    return staffData[a].lastActivityTimestamp - staffData[b].lastActivityTimestamp;
+                });
+                return availableStaff;
+            }
+
+            function updateTurnIndicator() {
+                const orderedStaff = getStaffQueueOrder();
+                const nextStaff = orderedStaff.length > 0 ? orderedStaff[0] : null;
+
+                document.querySelectorAll('#scoreboard-list li').forEach(li => {
+                    li.classList.remove('next-in-line');
+                });
+                if (nextStaff) {
+                    const nextStaffElement = document.querySelector(`.history-btn[data-staff="${nextStaff}"]`);
+                    if (nextStaffElement) {
+                        nextStaffElement.closest('li').classList.add('next-in-line');
+                    }
+                }
+
+                if (nextStaff && nextStaff !== lastTopStaff) {
+                    const textToSpeak = `Sıradaki personel, ${nextStaff}`;
+                    speak(textToSpeak);
+                }
+
+                if (nextStaff) {
+                    staffNameElement.textContent = nextStaff;
+                } else {
+                    staffNameElement.textContent = 'Müsait Personel Yok';
+                }
+                lastTopStaff = nextStaff;
+            }
+
+            function updateTime() {
+                const now = new Date();
+                timeElement.textContent = now.toLocaleTimeString('tr-TR');
+                dateElement.textContent = now.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            }
+
+            function populateAvailableStaffSelect() {
+                const availableStaff = staff.filter(s => staffData[s].status === 'Müsait');
+                phoneStaffSelect.innerHTML = '<option value="">Personel Seçin...</option>';
+                availableStaff.forEach(staffName => {
+                    const option = document.createElement('option');
+                    option.value = staffName;
+                    option.textContent = staffName;
+                    phoneStaffSelect.appendChild(option);
+                });
+            }
+
+            function renderScoreboard() {
+                const statusOrder = { 'Müsait': 1, 'Mola': 2, 'Meşgul': 3, 'İzinli': 4 };
+                const availableStaff = getStaffQueueOrder();
+                const otherStaff = staff
+                    .filter(s => !availableStaff.includes(s))
+                    .sort((a, b) => {
+                        const statusDiff = statusOrder[staffData[a].status] - statusOrder[staffData[b].status];
+                        if (statusDiff !== 0) return statusDiff;
+                        return a.localeCompare(b, 'tr');
+                    });
+                const displayOrder = [...availableStaff, ...otherStaff];
+                scoreboardList.innerHTML = '';
+                const statusClassMap = {
+                    'Müsait': 'status-müsait',
+                    'Meşgul': 'status-meşgul',
+                    'Mola': 'status-mola',
+                    'İzinli': 'status-i̇zinli'
+                };
+                displayOrder.forEach(staffName => {
+                    const data = staffData[staffName];
+                    const li = document.createElement('li');
+                    const statusOptions = `
+                        <option value="Müsait" ${data.status === 'Müsait' ? 'selected' : ''}>Müsait</option>
+                        <option value="Mola" ${data.status === 'Mola' ? 'selected' : ''}>Mola</option>
+                        <option value="İzinli" ${data.status === 'İzinli' ? 'selected' : ''}>İzinli</option>
+                        <option value="Meşgul" ${data.status === 'Meşgul' ? 'selected' : ''} disabled>Meşgul</option>
+                    `;
+                    const returnInfo = data.returnFromLeaveInfo;
+                    const infoIconHTML = returnInfo ? `<button class="info-btn" data-staff="${staffName}" title="İzin dönüş bilgisini gör">ℹ️</button>` : '';
+                    const lastActivityTime = new Date(data.lastActivityTimestamp)
+                        .toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const statusClass = statusClassMap[data.status] || '';
+                    const queueIndex = availableStaff.indexOf(staffName);
+                    const queueNumberHTML = (queueIndex !== -1) ? `<span class="queue-order-number">${queueIndex + 1}</span>` : `<span class="queue-order-number">-</span>`;
+                    const isSelectDisabled = data.isBusyWithCustomer;
+                    li.innerHTML = `
+                        <div class="staff-queue-info">
+                            <span class="status-indicator ${statusClass}"></span>
+                            ${queueNumberHTML}
+                        </div>
+                        <div class="staff-details">
+                            <span class="staff-name-container">${staffName} ${infoIconHTML}</span>
+                            <span class="last-activity-time">Son İşlem: ${lastActivityTime}</span>
+                        </div>
+                        <select class="status-select" data-staff="${staffName}" ${isSelectDisabled ? 'disabled' : ''}>
+                            ${statusOptions}
+                        </select>
+                        <span class="score">${data.gercekSkor}</span>
+                        <button class="history-btn" data-staff="${staffName}" title="Geçmişi Görüntüle">📋</button>
+                    `;
+                    scoreboardList.appendChild(li);
+                });
+                const isLocked = !!pendingAction;
+                document.querySelectorAll('.status-select:not(:disabled)').forEach(el => el.disabled = isLocked);
+                acceptCustomerBtn.disabled = isLocked;
+                assignPhoneCustomerBtn.disabled = isLocked;
+                populateAvailableStaffSelect();
+            }
+
+            function parseDurationToSeconds(durationStr) {
+                if (!durationStr) return 0;
+                const value = parseInt(durationStr, 10);
+                if (isNaN(value)) return 0;
+                if (durationStr.includes('dk')) return value * 60;
+                if (durationStr.includes('sn')) return value;
+                return value * 60;
+            }
+
+            function updateHoldTimers() {
+                const heldCustomers = heldCustomerListElement.querySelectorAll('li');
+                const now = Date.now();
+                heldCustomers.forEach(li => {
+                    const holdEndTime = parseInt(li.dataset.holdEndTime, 10);
+                    const initialTimestamp = parseInt(li.dataset.timestamp, 10);
+                    const remaining = holdEndTime - now;
+                    const heldByStaff = li.dataset.heldBy || 'Bilinmiyor';
+                    const totalWaitSeconds = (now - initialTimestamp) / 1000;
+                    const waitTimeSpan = li.querySelector('.customer-wait-time');
+                    if (waitTimeSpan) {
+                        waitTimeSpan.textContent = `Toplam: ${formatWaitTime(totalWaitSeconds)}`;
+                    }
+                    if (remaining <= 0) {
+                        li.removeAttribute('data-hold-end-time');
+                        li.removeAttribute('data-held-by');
+                        const statusSpan = li.querySelector('.hold-status');
+                        if (statusSpan) statusSpan.remove();
+                        heldCustomerListElement.removeChild(li);
+                        customerListElement.appendChild(li);
+                        logActivity('Sistem', 'bekletme süresi doldu, kuyruğa döndü', `Müşteri: ${li.querySelector('.customer-name').textContent}`);
+                    } else {
+                        const minutes = Math.floor(remaining / 60000);
+                        const seconds = Math.floor((remaining % 60000) / 1000);
+                        const statusSpan = li.querySelector('.hold-status');
+                        if (statusSpan) statusSpan.textContent = `(Kalan: ${minutes}:${seconds.toString().padStart(2, '0')} - ${heldByStaff} tarafından)`;
+                    }
+                });
+            }
+            
+            function formatDuration(milliseconds) {
+                if (!milliseconds || milliseconds < 0) return "";
+                let totalSeconds = Math.floor(milliseconds / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                return `${minutes} dk ${seconds} sn`;
+            }
+
+            function renderMessages(contactName) {
+                messagesWindow.innerHTML = '';
+                const history = chatHistory[contactName] || [];
+                history.forEach(msg => {
+                    const p = document.createElement('p');
+                    p.innerHTML = `<b>${msg.sender}:</b> ${msg.text}`;
+                    messagesWindow.appendChild(p);
+                });
+                messagesWindow.scrollTop = messagesWindow.scrollHeight;
+            }
+
+            function populateContactList() {
+                contactList.innerHTML = '';
+                Object.keys(chatHistory).forEach(contactName => {
+                    const div = document.createElement('div');
+                    div.textContent = contactName;
+                    if (contactName === '# Toplu Mesaj') div.classList.add('active');
+                    contactList.appendChild(div);
+                });
+            }
+
+            function lockUI(lock = true) {
+                document.querySelectorAll('.status-select:not(:disabled)').forEach(el => el.disabled = lock);
+                acceptCustomerBtn.disabled = lock;
+                assignPhoneCustomerBtn.disabled = lock;
+            }
+
+            function exportToExcelWithSheets() {
+                const logData = [];
+                const logItems = activityLogList.querySelectorAll('li');
+                const reversedLogItems = Array.from(logItems).reverse();
+                reversedLogItems.forEach(item => {
+                    const rawText = item.innerHTML;
+                    const match = rawText.match(/<b>\[(.*?)\] (.*?):<\/b> (.*?)(?:\s\((.*)\))?$/);
+                    if (match) {
+                        logData.push({
+                            "Zaman": match[1] || '',
+                            "Personel": match[2] || '',
+                            "Eylem": match[3] || '',
+                            "Detay": match[4] ? match[4].replace(/&quot;/g, '"') : ''
+                        });
+                    }
+                });
+                const chartData = [];
+                const hourlyData = {};
+                const todayString = new Date().toDateString();
+                let totalGateCustomers = 0;
+                gateCustomerLog.forEach(customer => {
+                    if (new Date(customer.timestamp).toDateString() === todayString) {
+                        const hour = new Date(customer.timestamp).getHours();
+                        hourlyData[hour] = (hourlyData[hour] || 0) + 1;
+                    }
+                });
+                for (let hour = 0; hour < 24; hour++) {
+                    const count = hourlyData[hour] || 0;
+                    chartData.push({ "Saat": `${String(hour).padStart(2, '0')}:00`, "Kapı Müşteri Sayısı": count });
+                    totalGateCustomers += count;
+                }
+                chartData.push({ "Saat": "Genel Toplam", "Kapı Müşteri Sayısı": totalGateCustomers });
+                const wb = XLSX.utils.book_new();
+                const headerStyle = { fill: { fgColor: { rgb: "F2F2F2" } }, font: { bold: true } };
+                const borderStyle = { style: "thin", color: { rgb: "000000" } };
+                const allBorders = { top: borderStyle, bottom: borderStyle, left: borderStyle, right: borderStyle };
+                const applyStyles = (ws, totalRowIndex = -1) => {
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            const cell_address = { c: C, r: R };
+                            const cell_ref = XLSX.utils.encode_cell(cell_address);
+                            const cell = ws[cell_ref];
+                            if (!cell) continue;
+                            if (!cell.s) cell.s = {};
+                            cell.s.border = allBorders;
+                            if (R === 0) {
+                                cell.s.fill = headerStyle.fill;
+                                cell.s.font = headerStyle.font;
+                            }
+                            if (R === totalRowIndex) {
+                                if (!cell.s.font) cell.s.font = {};
+                                cell.s.font.bold = true;
+                            }
+                        }
+                    }
+                };
+                const ws1 = XLSX.utils.json_to_sheet(logData, { header: ["Zaman", "Personel", "Eylem", "Detay"] });
+                applyStyles(ws1);
+                ws1['!cols'] = [{ wch: 10 }, { wch: 20 }, { wch: 40 }, { wch: 40 }];
+                XLSX.utils.book_append_sheet(wb, ws1, "Son Hareketler");
+                const ws2 = XLSX.utils.json_to_sheet(chartData, { header: ["Saat", "Kapı Müşteri Sayısı"] });
+                const totalRowIndexForSheet2 = chartData.length;
+                applyStyles(ws2, totalRowIndexForSheet2);
+                ws2['!cols'] = [{ wch: 20 }, { wch: 25 }];
+                XLSX.utils.book_append_sheet(wb, ws2, "Günlük Grafik Verisi");
+                const today = new Date();
+                const dateString = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+                downloadCounters[dateString] = (downloadCounters[dateString] || 0) + 1;
+                const count = downloadCounters[dateString];
+                let finalFilename = `${dateString}.xlsx`;
+                if (count > 1) {
+                    finalFilename = `${dateString} (${count - 1}).xlsx`;
+                }
+                XLSX.writeFile(wb, finalFilename);
+            }
+
+            toggleTtsBtn.addEventListener('click', () => {
+                isTtsEnabled = !isTtsEnabled;
+                if (isTtsEnabled) {
+                    toggleTtsBtn.classList.add('active');
+                    toggleTtsBtn.textContent = '🔊';
+                    speak("Sesli bildirimler açıldı.");
+                } else {
+                    toggleTtsBtn.classList.remove('active');
+                    toggleTtsBtn.textContent = '🔇';
+                    window.speechSynthesis.cancel();
+                }
+                localStorage.setItem('ttsEnabledPreference', isTtsEnabled);
+            });
+
+            addGateCustomerBtn.addEventListener('click', addGateCustomerToQueue);
+            gateCustomerNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addGateCustomerToQueue(); });
+
+            assignPhoneCustomerBtn.addEventListener('click', async () => {
+                const customerName = phoneCustomerNameInput.value.trim() || `Telefon Müşterisi #${++phoneCustomerCounter}`;
+                const staffName = phoneStaffSelect.value;
+                if (!staffName) {
+                    showNotification('Lütfen müşteriyi atamak için bir personel seçin.', 'error');
+                    return;
+                }
+                const { confirmed } = await showConfirmation({
+                    title: "Müşteri Atama Onayı",
+                    message: `<b>${customerName}</b> adlı müşteri, <b>${staffName}</b> personeline atanacaktır. Onaylıyor musunuz?`
+                });
+                if (!confirmed) return;
+                const staffMember = staffData[staffName];
+                staffMember.status = 'Meşgul';
+                staffMember.isBusyWithCustomer = true;
+                staffMember.phoneSkor++;
+                const customer = { id: 'cust-' + Date.now(), name: customerName, acceptedTimestamp: Date.now(), finishedTimestamp: null, type: 'phone' };
+                staffMember.servedCustomers.push(customer);
+                showNotification(`${customerName} adlı müşteri, ${staffName} personeline atandı.`, 'success');
+                if (acceptSound) {
+                    acceptSound.currentTime = 0;
+                    acceptSound.play().catch(e => console.error("Kabul sesi çalınamadı:", e));
+                }
+                logActivity(staffName, 'telefon müşterisini kabul etti', `Müşteri: ${customerName}`);
+                phoneCustomerNameInput.value = '';
+                phoneStaffSelect.value = '';
+                renderScoreboard();
+                updateTurnIndicator();
+            });
+
+            acceptCustomerBtn.addEventListener('click', async () => {
+                const currentStaff = staffNameElement.textContent;
+                if (!staff.includes(currentStaff)) {
+                    showNotification('Şu anda müsait bir personel bulunmuyor.', 'error');
+                    return;
+                }
+                const selectedCustomer = customerListElement.querySelector('li.selected');
+                if (!selectedCustomer) {
+                    showNotification('Lütfen önce listeden kabul edilecek bir müşteri seçin!', 'error');
+                    return;
+                }
+                const customerName = selectedCustomer.querySelector('.customer-name').textContent;
+                const { confirmed } = await showConfirmation({ message: `<b>${currentStaff}</b> olarak <b>${customerName}</b> adlı müşteriyi kabul etmek istediğinize emin misiniz?` });
+                if (!confirmed) return;
+                const staffMember = staffData[currentStaff];
+                staffMember.status = 'Meşgul';
+                staffMember.isBusyWithCustomer = true;
+                staffMember.gercekSkor++;
+                staffMember.denklemSkoru++;
+                const customer = { id: 'cust-' + Date.now(), name: customerName, acceptedTimestamp: Date.now(), finishedTimestamp: null, type: 'gate' };
+                staffMember.servedCustomers.push(customer);
+                showNotification(`${customerName} adlı müşteri, ${currentStaff} tarafından kabul edildi.`, 'success');
+                if (acceptSound) {
+                    acceptSound.currentTime = 0;
+                    acceptSound.play().catch(e => console.error("Kabul sesi çalınamadı:", e));
+                }
+                logActivity(currentStaff, 'kapı müşterisini kabul etti', `Müşteri: ${customerName}`);
+                customerListElement.removeChild(selectedCustomer);
+                renderScoreboard();
+                updateTurnIndicator();
+            });
+
+            holdCustomerBtn.addEventListener('click', async () => {
+                const actorName = staffNameElement.textContent;
+                const selectedCustomer = customerListElement.querySelector('li.selected');
+                if (!selectedCustomer) {
+                    showNotification('Lütfen önce listeden bekletilecek bir müşteri seçin!', 'error');
+                    return;
+                }
+                const customerName = selectedCustomer.querySelector('.customer-name').textContent;
+                const { confirmed, value: durationStr } = await showConfirmation({
+                    message: `<b>${customerName}</b> adlı müşteriyi ne kadar süreyle bekletmek istersiniz?`,
+                    inputOptions: { placeholder: 'Örn: 5 dk, 30 sn', value: '5 dk' },
+                    title: "Müşteri Bekletme"
+                });
+                if (!confirmed || !durationStr) return;
+                let statusChanged = false;
+                if (staff.includes(actorName) && staffData[actorName].status === 'Müsait') {
+                    const statusChangeConfirmation = await showConfirmation({
+                        title: "Durum Değişikliği Onayı",
+                        message: `Bu işlemi yaptığınızda durumunuz "meşgul" olarak güncellenecektir. Devam etmek ister misiniz?`
+                    });
+                    if (!statusChangeConfirmation.confirmed) {
+                        return;
+                    }
+                    staffData[actorName].status = 'Meşgul';
+                    statusChanged = true;
+                }
+                const validActorForLog = staff.includes(actorName) ? actorName : 'Yönetici';
+                const durationSec = parseDurationToSeconds(durationStr);
+                if (durationSec > 0) {
+                    selectedCustomer.dataset.holdEndTime = Date.now() + durationSec * 1000;
+                    selectedCustomer.dataset.heldBy = validActorForLog;
+                    let statusSpan = selectedCustomer.querySelector('.hold-status');
+                    if (!statusSpan) {
+                        statusSpan = document.createElement('span');
+                        statusSpan.className = 'hold-status';
+                        selectedCustomer.querySelector('.queue-info-container').insertBefore(statusSpan, selectedCustomer.querySelector('.customer-wait-time'));
+                    }
+                    customerListElement.removeChild(selectedCustomer);
+                    heldCustomerListElement.appendChild(selectedCustomer);
+                    selectedCustomer.classList.remove('selected');
+                    showNotification(`${customerName} adlı müşteri beklemeye alındı.`, 'info');
+                    logActivity(validActorForLog, 'müşteriyi beklemeye aldı', `Müşteri: ${customerName}`);
+                    if (statusChanged) {
+                        renderScoreboard();
+                        updateTurnIndicator();
+                    }
+                } else {
+                    showNotification('Geçersiz süre formatı girdiniz.', 'error');
+                }
+            });
+
+            customerListElement.addEventListener('click', (e) => {
+                const li = e.target.closest('li');
+                if (!li) return;
+                if (e.target.classList.contains('actions-menu-btn')) {
+                    e.stopPropagation();
+                    openActionsMenu(li);
+                    return;
+                }
+                if (!e.target.closest('.customer-actions')) {
+                    closeActionsMenu();
+                    customerListElement.querySelectorAll('li').forEach(c => c.classList.remove('selected'));
+                    li.classList.add('selected');
+                }
+            });
+
+            heldCustomerListElement.addEventListener('click', (e) => {
+                const li = e.target.closest('li');
+                if (!li) return;
+                if (e.target.classList.contains('actions-menu-btn')) {
+                    e.stopPropagation();
+                    openActionsMenu(li);
+                    return;
+                }
+            });
+
+            document.addEventListener('click', async (e) => {
+                if (!e.target.closest('.actions-menu-btn')) {
+                    closeActionsMenu();
+                }
+                const link = e.target.closest('.dropdown-menu a');
+                if (link) {
+                    e.preventDefault();
+                    const menu = link.closest('.dropdown-menu');
+                    const targetId = menu.dataset.targetId;
+                    const li = document.getElementById(targetId);
+                    if (!li) return;
+                    const currentStaffForLog = staffNameElement.textContent || 'Sistem';
+                    if (link.classList.contains('edit-name')) {
+                        const nameSpan = li.querySelector('.customer-name');
+                        const oldName = nameSpan.textContent;
+                        
+                        isEditingName = true;
+                        nameSpan.setAttribute('contenteditable', 'true');
+                        nameSpan.focus();
+
+                        const selection = window.getSelection();
+                        const range = document.createRange();
+                        range.selectNodeContents(nameSpan);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+
+                        nameSpan.addEventListener('blur', () => {
+                            isEditingName = false;
+                            nameSpan.setAttribute('contenteditable', 'false');
+                            if (nameSpan.textContent !== oldName) {
+                                logActivity(currentStaffForLog, 'müşteri adını güncelledi', `"${oldName}" -> "${nameSpan.textContent}"`);
+                                li.dataset.name = nameSpan.textContent;
+                                nameSpan.title = nameSpan.textContent;
+                            }
+                        }, { once: true });
+
+                        nameSpan.addEventListener('keydown', (event) => {
+                            if (event.key === 'Enter') { 
+                                event.preventDefault(); 
+                                nameSpan.blur(); 
+                            }
+                        });
+
+                    } else if (link.classList.contains('delete-customer')) {
+                        const customerName = li.querySelector('.customer-name').textContent;
+                        const { confirmed, value: reason } = await showConfirmation({
+                            title: "Müşteri Silme Onayı",
+                            message: `<b>${customerName}</b> adlı müşteriyi silmek üzeresiniz. Lütfen silme sebebini belirtin.`,
+                            inputOptions: { placeholder: "Sebep (Zorunlu)..." }
+                        });
+                        if (confirmed) {
+                            if (!reason || reason.trim() === '') {
+                                showNotification('Silme sebebi boş bırakılamaz!', 'error');
+                                return;
+                            }
+                            li.remove();
+                            logActivity(currentStaffForLog, 'müşteriyi sildi', `Müşteri: "${customerName}", Sebep: "${reason}"`);
+                        }
+                    } else if (link.classList.contains('remove-hold')) {
+                        const customerName = li.querySelector('.customer-name').textContent;
+                        const targetStaffName = li.dataset.heldBy;
+                        const clickedBy = staffNameElement.textContent || 'Yönetici';
+                        if (targetStaffName && staffData[targetStaffName]) {
+                            const targetStaffMember = staffData[targetStaffName];
+                            if (targetStaffMember.status === 'Müsait') {
+                                targetStaffMember.status = 'Meşgul';
+                                targetStaffMember.isBusyWithCustomer = true;
+                                targetStaffMember.gercekSkor++;
+                                targetStaffMember.denklemSkoru++;
+                                targetStaffMember.lastActivityTimestamp = Date.now();
+                                const customerData = {
+                                    id: 'cust-' + Date.now(),
+                                    name: customerName,
+                                    acceptedTimestamp: Date.now(),
+                                    finishedTimestamp: null,
+                                    type: 'gate'
+                                };
+                                targetStaffMember.servedCustomers.push(customerData);
+                                showNotification(`${customerName} adlı müşteri, ${targetStaffName} personeline başarıyla atandı.`, 'success');
+                                logActivity(targetStaffName, 'transferle bekletilen müşteriyi otomatik olarak kabul etti', `Müşteri: ${customerName}`);
+                                li.remove();
+                                renderScoreboard();
+                                updateTurnIndicator();
+                            } else {
+                                li.removeAttribute('data-hold-end-time');
+                                li.removeAttribute('data-held-by');
+                                const statusSpan = li.querySelector('.hold-status');
+                                if (statusSpan) statusSpan.remove();
+                                heldCustomerListElement.removeChild(li);
+                                customerListElement.appendChild(li);
+                                showNotification(`${targetStaffName} henüz müsait değil. ${customerName} ana sıraya eklendi.`, 'warning');
+                                logActivity(clickedBy, `bekletmeyi kaldırdı, ${targetStaffName} meşgul olduğu için sıraya gönderdi`, `Müşteri: ${customerName}`);
+                            }
+                        } else {
+                            li.removeAttribute('data-hold-end-time');
+                            li.removeAttribute('data-held-by');
+                            const statusSpan = li.querySelector('.hold-status');
+                            if (statusSpan) statusSpan.remove();
+                            heldCustomerListElement.removeChild(li);
+                            customerListElement.appendChild(li);
+                            showNotification(`${customerName} için bekletme kaldırıldı, sıraya eklendi.`, 'info');
+                            logActivity(clickedBy, 'bekletmeyi kaldırdı, sıraya gönderdi', `Müşteri: ${customerName}`);
+                        }
+                    }
+                }
+            });
+
+            addAnnouncementBtn.addEventListener('click', async () => {
+                const { confirmed, value: announcement } = await showConfirmation({
+                    title: "Yeni Duyuru Ekle",
+                    message: "Lütfen yeni duyuru metnini girin:",
+                    inputOptions: { placeholder: "Duyuru metni..." }
+                });
+                if (confirmed && announcement && announcement.trim() !== "") {
+                    const li = document.createElement('li');
+                    const trimmedAnnouncement = announcement.trim();
+                    li.textContent = trimmedAnnouncement;
+                    document.getElementById('announcement-list').prepend(li);
+                    logActivity("Yönetici", "yeni duyuru ekledi");
+                    showCenteredAnnouncement(trimmedAnnouncement);
+                }
+            });
+
+            scoreboardList.addEventListener('change', async (e) => {
+                if (e.target.classList.contains('status-select')) {
+                    const selectElement = e.target;
+                    const staffName = selectElement.dataset.staff;
+                    const newStatus = selectElement.value;
+                    const oldStatus = staffData[staffName].status;
+                    if (newStatus === oldStatus) return;
+                    if (staffData[staffName].isBusyWithCustomer) {
+                        showNotification('Devam eden bir müşteri işlemi varken durum değiştiremezsiniz.', 'error');
+                        selectElement.value = oldStatus;
+                        return;
+                    }
+                    const { confirmed } = await showConfirmation({
+                        title: "Durum Değişikliği Onayı",
+                        message: `<b>${staffName}</b> için durumu <b>'${oldStatus}'</b> → <b>'${newStatus}'</b> olarak değiştirmek istediğinize emin misiniz?`
+                    });
+                    if (!confirmed) {
+                        selectElement.value = oldStatus;
+                        return;
+                    }
+                    const actionTimestamp = Date.now();
+                    const createUndoableAction = (message) => {
+                        lockUI(true);
+                        const commit = () => {
+                            if (pendingAction) {
+                                staffData[staffName].status = newStatus;
+                                logActivity(staffName, 'durumunu güncelledi', `Yeni Durum: ${newStatus}`);
+                                pendingAction = null;
+                                lockUI(false);
+                                renderScoreboard();
+                                updateTurnIndicator();
+                            }
+                        };
+                        const undo = () => {
+                            if (pendingAction) {
+                                clearTimeout(pendingAction.timeoutId);
+                                pendingAction = null;
+                            }
+                            lockUI(false);
+                            selectElement.value = oldStatus;
+                            showNotification("İşlem iptal edildi.", "warning", 2000);
+                        };
+                        const timeoutId = showNotification(message, "info", 5000, () => undo());
+                        pendingAction = { commit, timeoutId };
+                    };
+                    if ((oldStatus === 'Mola' && newStatus === 'Müsait') || (oldStatus === 'Müsait' && newStatus === 'Mola')) {
+                        createUndoableAction("Durum değiştiriliyor...");
+                    } else if (oldStatus === 'Müsait' && newStatus === 'İzinli') {
+                        createUndoableAction("Durum 'İzinli' olarak değiştiriliyor...");
+                    }
+                    else {
+                        staffData[staffName].status = newStatus;
+                        if (oldStatus === 'İzinli' && newStatus === 'Müsait') {
+                            const activeStaffScores = staff.filter(s => s !== staffName && staffData[s].status !== 'İzinli').map(s => staffData[s].denklemSkoru);
+                            const maxScore = activeStaffScores.length > 0 ? Math.max(...activeStaffScores) : 0;
+                            staffData[staffName].denklemSkoru = maxScore;
+                            staffData[staffName].lastActivityTimestamp = actionTimestamp;
+                            staffData[staffName].returnFromLeaveInfo = { timestamp: new Date(actionTimestamp) };
+                            logActivity(staffName, 'izinden döndü ve sıranın sonuna yerleşti');
+                        }
+                        logActivity(staffName, 'durumunu güncelledi', `Yeni Durum: ${newStatus}`);
+                        renderScoreboard();
+                        updateTurnIndicator();
+                    }
+                }
+            });
+
+            scoreboardList.addEventListener('click', (e) => {
+                const infoButton = e.target.closest('.info-btn');
+                if (infoButton) {
+                    const staffName = infoButton.dataset.staff;
+                    const returnInfo = staffData[staffName]?.returnFromLeaveInfo;
+                    if (returnInfo) {
+                        const formattedDateTime = returnInfo.timestamp.toLocaleString('tr-TR', {
+                            year: 'numeric', month: 'long', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        });
+                        showConfirmation({
+                            title: "İzin Dönüş Bilgisi",
+                            message: `<b>${staffName}</b>, ${formattedDateTime} tarihinde durumunu 'Müsait' olarak değiştirmiştir.`,
+                            alertMode: true
+                        });
+                    }
+                    return;
+                }
+                if (e.target.classList.contains('history-btn')) {
+                    const staffName = e.target.dataset.staff;
+                    historyModalTitle.textContent = `${staffName} - Müşteri Geçmişi`;
+                    historyList.innerHTML = '';
+                    const customers = staffData[staffName].servedCustomers;
+                    if (customers.length === 0) {
+                        historyList.innerHTML = '<li>Bu personel henüz müşteri almadı.</li>';
+                    } else {
+                        customers.forEach(cust => {
+                            const li = document.createElement('li');
+                            const customerTypeLabel = cust.type === 'gate' ? 'Kapı' : 'Telefon';
+                            let sH = '';
+                            if (cust.finishedTimestamp) {
+                                const d = formatDuration(cust.finishedTimestamp - cust.acceptedTimestamp);
+                                sH = `<span class="duration"> (İşlem Süresi: ${d})</span>`;
+                            } else {
+                                sH = `<span class="status-masada">meşgul</span>
+                                                <button class="transfer-btn" data-staff="${staffName}" data-cust-id="${cust.id}">🔄 Aktar</button>
+                                                <button class="finish-btn" data-staff="${staffName}" data-cust-id="${cust.id}">✔ Bitir</button>`;
+                            }
+                            li.innerHTML = `<span contenteditable="true" data-cust-id="${cust.id}" data-staff="${staffName}">${cust.name}</span><span class="cust-type-indicator">(${customerTypeLabel})</span>${sH}`;
+                            historyList.appendChild(li);
+                        });
+                    }
+                    historyModal.style.display = 'flex';
+                }
+            });
+
+            historyList.addEventListener('click', async (e) => {
+                const button = e.target;
+                const staffName = button.dataset.staff;
+                const custId = button.dataset.custId;
+                const customer = staffData[staffName]?.servedCustomers.find(c => c.id === custId);
+                if (!customer) return;
+                if (button.classList.contains('finish-btn')) {
+                    const { confirmed } = await showConfirmation({ message: `<b>${customer.name}</b> isimli müşterinin işlemini bitirmek istediğinize emin misiniz?` });
+                    if (!confirmed) return;
+                    customer.finishedTimestamp = Date.now();
+                    const staffMember = staffData[staffName];
+                    staffMember.status = 'Müsait';
+                    staffMember.isBusyWithCustomer = false;
+                    if (customer.type === 'gate') {
+                        staffMember.lastActivityTimestamp = Date.now();
+                    }
+                    showNotification(`${customer.name} adlı müşterinin işlemi tamamlandı.`, 'success');
+                    logActivity(staffName, 'müşteri işlemini tamamladı', `Müşteri: ${customer.name}`);
+                    button.closest('.modal').style.display = 'none';
+                    renderScoreboard();
+                    updateTurnIndicator();
+                } else if (button.classList.contains('transfer-btn')) {
+                    const otherStaff = staff.filter(s => s !== staffName);
+                    const optionsHtml = otherStaff.map(s => `<option value="${s}">${s} (${staffData[s].status})</option>`).join('');
+                    const { confirmed, selectValue: targetStaffName } = await showConfirmation({
+                        title: "Müşteri Transferi",
+                        customHtmlContent: `<p><b>${customer.name}</b> müşterisini kime transfer etmek istersiniz?</p>
+                                                    <select id="transfer-select">${optionsHtml}</select>`,
+                        yesText: "Transfer Et"
+                    });
+                    if (!confirmed || !targetStaffName) return;
+                    const sourceStaff = staffData[staffName];
+                    const targetStaff = staffData[targetStaffName];
+                    sourceStaff.servedCustomers = sourceStaff.servedCustomers.filter(c => c.id !== custId);
+                    sourceStaff.isBusyWithCustomer = false;
+                    sourceStaff.status = 'Müsait';
+                    sourceStaff.lastActivityTimestamp = Date.now();
+                    if (targetStaff.status === 'Müsait') {
+                        targetStaff.servedCustomers.push(customer);
+                        targetStaff.isBusyWithCustomer = true;
+                        targetStaff.status = 'Meşgul';
+                        logActivity(staffName, 'müşteriyi transfer etti', `Müşteri: "${customer.name}", Yeni Personel: "${targetStaffName}"`);
+                        showNotification(`Müşteri ${targetStaffName} personeline başarıyla transfer edildi.`, 'success');
+                    }
+                    else {
+                        const newHeldLi = document.createElement('li');
+                        newHeldLi.id = `customer-${Date.now()}`;
+                        newHeldLi.dataset.timestamp = customer.acceptedTimestamp;
+                        newHeldLi.dataset.name = customer.name;
+                        newHeldLi.dataset.holdEndTime = Date.now() + 10 * 60 * 1000;
+                        newHeldLi.dataset.heldBy = targetStaffName;
+                        newHeldLi.innerHTML = `
+                                <div class="queue-info-container">
+                                    <span class="hold-status"></span>
+                                    <span class="customer-name" title="${customer.name}">${customer.name}</span>
+                                    <span class="customer-wait-time"></span>
+                                </div>
+                                <div class="customer-actions">
+                                    <button class="actions-menu-btn" title="İşlemler">⋮</button>
+                                </div>`;
+                        heldCustomerListElement.appendChild(newHeldLi);
+                        logActivity(staffName, 'müşteriyi transfer etti, personel meşgul olduğu için beklemeye alındı', `Müşteri: "${customer.name}", Yeni Personel: "${targetStaffName}"`);
+                        showNotification(`Müşteri, ${targetStaffName} için 10 dakika beklemeye alındı.`, 'warning');
+                    }
+                    button.closest('.modal').style.display = 'none';
+                    renderScoreboard();
+                    updateTurnIndicator();
+                }
+            });
+            
+            historyList.addEventListener('focusout', (e) => {
+                if (e.target.hasAttribute('contenteditable')) {
+                    const staffName = e.target.dataset.staff;
+                    const custId = e.target.dataset.custId;
+                    const customer = staffData[staffName]?.servedCustomers.find(c => c.id === custId);
+                    if (customer && customer.name !== e.target.textContent) {
+                        const oldName = customer.name;
+                        customer.name = e.target.textContent;
+                        logActivity(staffName, `geçmişteki müşteri adını güncelledi`, `"${oldName}" -> "${customer.name}"`);
+                    }
+                }
+            });
+
+            openChatBtn.addEventListener('click', () => {
+                chatModal.style.display = 'flex';
+                populateContactList();
+                renderMessages('# Toplu Mesaj');
+            });
+
+            contactList.addEventListener('click', (e) => {
+                if (e.target.tagName === 'DIV') {
+                    contactList.querySelectorAll('div').forEach(div => div.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderMessages(e.target.textContent);
+                }
+            });
+
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+                    const activeContactDiv = contactList.querySelector('.active');
+                    if (!activeContactDiv) return;
+                    const activeContactName = activeContactDiv.textContent;
+                    const messageText = chatInput.value.trim();
+                    chatHistory[activeContactName].push({ sender: 'Siz', text: messageText });
+                    renderMessages(activeContactName);
+                    chatInput.value = '';
+                }
+            });
+
+            activitySearchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const logItems = activityLogList.querySelectorAll('li');
+                logItems.forEach(item => {
+                    const itemText = item.textContent.toLowerCase();
+                    if (itemText.includes(searchTerm)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+            
+            exportExcelBtn.addEventListener('click', exportToExcelWithSheets);
+            closeHistoryBtn.addEventListener('click', () => historyModal.style.display = 'none');
+            closeChatBtn.addEventListener('click', () => chatModal.style.display = 'none');
+
+            window.addEventListener('click', (event) => {
+                if (event.target == historyModal) historyModal.style.display = 'none';
+                if (event.target == chatModal) chatModal.style.display = 'none';
+            });
+
+            function closeAllSidebars() {
+                leftSidebar.classList.remove('is-open');
+                rightSidebarContainer.classList.remove('is-open');
+                overlay.classList.remove('is-active');
+                if (mobileHeader) {
+                    mobileHeader.classList.remove('is-hidden');
+                }
+            }
+            
+            leftMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = leftSidebar.classList.toggle('is-open');
+                rightSidebarContainer.classList.remove('is-open');
+                overlay.classList.toggle('is-active', isOpen);
+                if (mobileHeader) {
+                    mobileHeader.classList.add('is-hidden');
+                }
+            });
+
+            rightMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = rightSidebarContainer.classList.toggle('is-open');
+                leftSidebar.classList.remove('is-open');
+                overlay.classList.toggle('is-active', isOpen);
+                if (mobileHeader) {
+                    mobileHeader.classList.add('is-hidden');
+                }
+            });
+            
+            overlay.addEventListener('click', closeAllSidebars);
+
+            function initialize() {
+                const savedTtsPref = localStorage.getItem('ttsEnabledPreference');
+                if (savedTtsPref !== null) {
+                    isTtsEnabled = savedTtsPref === 'true';
+                    if (isTtsEnabled) {
+                        toggleTtsBtn.classList.add('active');
+                        toggleTtsBtn.textContent = '🔊';
+                    } else {
+                        toggleTtsBtn.classList.remove('active');
+                        toggleTtsBtn.textContent = '🔇';
+                    }
+                }
+
+                renderScoreboard();
+                updateTurnIndicator();
+                updateTime();
+                
+                setInterval(() => {
+                    updateTime();
+                    if (!isEditingName) {
+                        renderCustomerList();
+                    }
+                    updateHoldTimers();
+                    updateTurnIndicator();
+                }, 1000);
+
+                logActivity('Sistem', 'Panel v4.2 (Final Tasarım) başlatıldı');
+            }
+
+            closeAnnouncementBtn.addEventListener('click', () => {
+                clearTimeout(announcementTimeoutId);
+                document.getElementById('centered-notification').classList.remove('is-visible');
+            });
+            
+            initialize();
+
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+            const edgeThreshold = 40;
+            const swipeMinDistance = 80;
+
+            document.body.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    touchEndX = touchStartX;
+                    touchEndY = touchStartY;
+                }
+            }, { passive: true });
+
+            document.body.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    touchEndX = e.touches[0].clientX;
+                    touchEndY = e.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            document.body.addEventListener('touchend', () => {
+                const diffX = touchEndX - touchStartX;
+                const diffY = touchEndY - touchStartY;
+
+                if (overlay.classList.contains('is-active') || document.querySelector('.modal[style*="display: flex"]')) {
+                    return;
+                }
+
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > swipeMinDistance) {
+                    if (touchStartX < edgeThreshold) {
+                        if (!leftSidebar.classList.contains('is-open')) {
+                            leftMenuBtn.click();
+                        }
+                    }
+                    else if (touchStartX > (window.innerWidth - edgeThreshold)) {
+                        if (!rightSidebarContainer.classList.contains('is-open')) {
+                            rightMenuBtn.click();
+                        }
+                    }
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
